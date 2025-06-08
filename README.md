@@ -44,66 +44,67 @@ At runtime, each layer `Lᵢ` is evaluated using a hardware-accelerated controll
 
 A utility score determines whether `Lᵢ` should remain in high precision or be quantized (e.g., from FP32 → INT8 or INT4). This score is computed **per forward pass**, allowing the system to adapt to runtime constraints **on the fly**.
 
-## 🔁 System Workflow
-
-### Step 1: Environment Modeling  
-From real-time sensors, we compute the environmental vector:
-
 ## 🔁 End-to-End System Workflow
 
-### **Step ①: Environment Modeling**
-Sensors yield an environment vector **𝐄 = [α, λ, ε]**, where:
-- `α ∈ [0,1]`: Accuracy demand
-- `λ ∈ [0,1]`: Latency sensitivity
-- `ε ∈ [0,1]`: Energy constraint level
+### **Step ①: Environment Modeling**  
+Sensors yield an environmental context vector:  
+**E = [α, λ, ε]**, where:
+- **α** ∈ [0,1] — Accuracy demand  
+- **λ** ∈ [0,1] — Latency sensitivity  
+- **ε** ∈ [0,1] — Energy constraint  
+
+This vector governs real-time quantization decisions.
 
 ---
 
-### **Step ②: Layer-Wise Gradient & Sparsity Analysis**
+### **Step ②: Layer-Wise Gradient & Sparsity Analysis**  
 For each layer `l`:
-- Compute the gradient of the loss: ∇W(l)L
-- Apply sparsity thresholding τ to obtain sparse mask ΔW(l):  
-  \[
-  ΔW^{(l)} = W^{(l)} - W^{(l)}_{\text{threshold}}
-  \]
+- Compute the gradient of the loss: **∇W(l)L**
+- Apply a threshold **τ** to obtain a sparse weight mask:
+
+ΔW(l) = W(l) − W_threshold(l)
+Where:
+W_threshold(i,j) = 0 if |W(i,j)| < τ
+W(i,j) otherwise
 
 ---
 
-### **Step ③: Sensitivity Score Calculation**
-Determine each layer’s relevance using:
-\[
-δ^{(l)} = ΔW^{(l)} \circ ∇W^{(l)}L
-\]
-Then normalize:
-\[
-\hat{S}^{(l)} = \frac{\sum_{i,j} |δ^{(l)}_{i,j}|}{\|W^{(l)}\|_F \cdot \|\nabla W^{(l)}L\|_F}
-\]
+### **Step ③: Sensitivity Score Calculation**  
+Calculate the element-wise product:
+
+δ(l) = ΔW(l) ⊙ ∇W(l)L
+
+
+Then compute the normalized sensitivity score:
+
+Ŝ(l) = Σ |ΔW(i,j) × ∇W(i,j)L| / (‖W(l)‖_F × ‖∇W(l)L‖_F)
+This gives a normalized sensitivity score per layer, where **‖·‖_F** is the Frobenius norm.
 
 ---
 
-### **Step ④: Layer Impact Vector Construction**
-Each layer is tagged with:
-\[
-\mathbf{S}_i = [g_i, l_i, e_i]
-\]
-- `gᵢ`: sensitivity to gradient
-- `lᵢ`: latency contribution (pre-profiled)
-- `eᵢ`: energy cost at full precision
+### **Step ④: Layer Impact Vector Construction**  
+Each layer is assigned a vector:
+
+Sᵢ = [gᵢ, lᵢ, eᵢ]
+
+Where:
+- **gᵢ**: Gradient impact on accuracy  
+- **lᵢ**: Latency contribution (profiled)  
+- **eᵢ**: Energy cost at full precision  
 
 ---
 
-### **Step ⑤: Quantization Decision Function**
-Given the environment vector 𝐄 = [α, λ, ε], compute:
-\[
-\text{Impact}_i = α \cdot g_i - λ \cdot l_i - ε \cdot e_i
-\]
+### **Step ⑤: Quantization Decision Function**  
+Given the environment vector **E = [α, λ, ε]**, compute:
 
-If `Impactᵢ` < threshold `θ`, then **quantize layer `i`** to a lower bit-width dynamically using on-chip control FSMs.
+If:
+Impactᵢ < θ
 
----
-If `Impactᵢ` is below a predefined threshold, the layer is **quantized at runtime** by updating hardware quantization registers.
+Then quantize layer **Lᵢ** to a lower bit-width at runtime using a hardware FSM controller. Precision is adjusted dynamically per inference based on this decision.
 
 ---
+
+
 
 ## ⚙️ Hardware Implementation
 
