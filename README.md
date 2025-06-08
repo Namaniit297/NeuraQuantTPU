@@ -1,10 +1,26 @@
 # 🧠 TPU-Enabled Layer-Wise Runtime Quantization Without Accuracy Degradation
 
-## 📌 Project Synopsis
+## 📌 Project Overview
 
-This project presents a **novel hardware-integrated framework** that performs **layer-wise quantization dynamically at runtime** within a **Tensor Processing Unit (TPU)**. The system intelligently determines the quantization bit-width for each neural network layer based on its real-time **contribution to model accuracy**, combined with the **environmental context** and **resource constraints**. The primary goal is to enable **energy-efficient inference** without compromising predictive performance.
+This project introduces a **hardware-embedded runtime quantization framework** for **Tensor Processing Units (TPUs)** that performs **layer-wise quantization** dynamically, based on each layer’s real-time contribution to model accuracy. The framework considers **environmental context**, **energy constraints**, and **layer sensitivity**, and dynamically adjusts precision without compromising predictive performance.
 
----
+## 🧩 TPU Architecture Summary
+
+The system is inspired by **Google TPU v1** and built around a **systolic array of MAC (Multiply-Accumulate) units** using a **weight-stationary dataflow**. Key architectural elements:
+
+- 🎯 **Systolic PE Array**:  
+  2D mesh of processing elements that hold weights locally while streaming inputs and partial sums through the array.
+
+- 📦 **On-Chip BRAM Buffers**:
+  - `Weight Buffer`: Stores preloaded weights.
+  - `Input Buffer`: Feeds input activations into the systolic array.
+  - `Partial Sum Buffer`: Accumulates outputs before write-back.
+
+- 🚀 **DMA-Controlled Pipelined Execution**:  
+  A lightweight DMA engine facilitates efficient data movement between:
+  - Host ↔ FPGA memory
+  - External DDR ↔ TPU buffers  
+  Enabling pipelined, low-latency execution.
 
 ## 🔍 Motivation
 
@@ -28,7 +44,10 @@ At runtime, each layer `Lᵢ` is evaluated using a hardware-accelerated controll
 
 A utility score determines whether `Lᵢ` should remain in high precision or be quantized (e.g., from FP32 → INT8 or INT4). This score is computed **per forward pass**, allowing the system to adapt to runtime constraints **on the fly**.
 
----
+## 🔁 System Workflow
+
+### Step 1: Environment Modeling  
+From real-time sensors, we compute the environmental vector:
 
 ## 🔁 End-to-End System Workflow
 
@@ -82,66 +101,78 @@ Given the environment vector 𝐄 = [α, λ, ε], compute:
 If `Impactᵢ` < threshold `θ`, then **quantize layer `i`** to a lower bit-width dynamically using on-chip control FSMs.
 
 ---
-
-## ⚙️ Hardware Integration Strategy
-
-- ⏱️ **FSM Controller** tracks layer execution in real time.
-- 📉 **Quantization LUT** holds latency & energy cost per bit-width.
-- 🧮 **Runtime Evaluator** computes utility scores during inference.
-- 🔄 **Bit-Width Register File** reprograms quantization modules on-the-fly.
+If `Impactᵢ` is below a predefined threshold, the layer is **quantized at runtime** by updating hardware quantization registers.
 
 ---
 
-## 🔬 Use Cases
+## ⚙️ Hardware Implementation
 
-- 🚗 Autonomous Systems: Terrain and speed-based bit-width selection
-- 🛰️ Drones: Runtime adaptation based on battery and mission phase
-- 📱 Mobile AI: On-device quantization for power-aware inference
+- ⏱️ **FSM Controller**: Tracks execution layer-by-layer.
+- 🧠 **Quantization LUT**: Holds bit-width, latency, and energy costs.
+- 🔁 **Runtime Registers**: Dynamically reprogram quantization.
+- 🧮 **PE Array**: Performs MAC operations in the assigned precision.
+- 🛜 **DMA Engine**: Handles high-throughput memory streaming.
+
+---
+
+## 💾 Software Interface (In Progress)
+
+We are developing a host software stack that:
+- Loads model weights into **TPU BRAMs**
+- Streams activations into **input buffers**
+- Sends layer metadata for quantization control
+- Coordinates execution through **DMA** and **control registers**
 
 ---
 
 ## 📈 Roadmap
 
-| Milestone | Status |
-|----------|--------|
-| ✅ Per-layer sensitivity computation | Done |
-| ✅ Runtime quantization control logic (simulated) | Done |
-| 🚧 Hardware RTL for quantization controller | In Progress |
-| 🔜 End-to-end TPU simulation (Verilog) | Planned |
-| 🔜 Integration with PyTorch model export | Planned |
-| 🔜 Multi-bit reconfigurable quantization LUT | Planned |
+| Milestone                                    | Status       |
+|---------------------------------------------|--------------|
+| Layer-wise gradient/sparsity analyzer       | ✅ Complete   |
+| Quantization control logic (simulated)      | ✅ Complete   |
+| Verilog RTL for runtime quantization        | 🚧 In Progress |
+| Software to deploy instruction and memory   | 🚧 In Progress |
+| PyTorch export with layer quant tags        | 🔜 Planned    |
+| Full FPGA prototyping                       | 🔜 Planned    |
+
+---
+
+## 🔬 Applications
+
+- 🚗 Autonomous driving: Context-aware quantization
+- 📱 Mobile inference: Power-aware runtime adaptation
+- 🛰 Edge AI: Dynamic precision scaling for efficiency
 
 ---
 
 ## 💬 Discussion Topics
 
-- Should quantization bit-widths be discrete (INT8, INT4) or continuous?
-- What’s the best frequency to re-evaluate layer utility? Every frame? Batch?
-- Can this method extend to activation quantization dynamically?
-- Could reinforcement learning help improve the mode decision policy?
+- How often should quantization be updated during inference?
+- Should precision scale in fixed steps (e.g. FP32 → INT8) or finer granularity?
+- How can we best estimate real-time energy per layer?
 
 ---
 
-## 🤝 Looking for Contributors
+## 🤝 Contributors Welcome
 
-We're seeking contributors with expertise in:
-- 🛠️ Verilog/SystemVerilog for RTL logic
-- 📐 Architecture modeling (TPU, systolic arrays)
-- 📊 Compiler metadata injection (e.g., per-layer profiling tags)
-- 🧪 PyTorch and quantization-aware training (QAT)
-
----
-
-## 📚 Reference Resources
-
-- *On-Device Dynamic Quantization for Efficient AI*  
-- *Sparsity-Aware Gradient Masking in Edge Inference*  
-- *TPU Architecture Whitepapers (Google, 2018–2023)*
+We invite help with:
+- Verilog/SystemVerilog for FSM and datapath
+- Compiler metadata support for per-layer tags
+- PyTorch QAT (quantization-aware training) tooling
+- DMA integration for FPGA-host pipelines
 
 ---
 
-## 🧵 Let’s Collaborate
+## 📚 References
 
-> Open an issue or discussion to contribute results, questions, or ideas.
+- Google TPUv1 Whitepaper  
+- QAT for Edge Accelerators  
+- Dynamic Precision Inference Strategies  
+- Systolic Array Design for Deep Learning
 
 ---
+
+## 📬 Let’s Collaborate
+
+> Open an issue or start a discussion to get involved in redefining runtime-efficient deep learning inference.
