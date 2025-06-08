@@ -4,7 +4,7 @@
  * This BRAM will store input activations for the systolic array.
  * Dual-port allows simultaneous read/write operations.
  *
- * Author: BLACKBOXAI
+ * Author:Naman Kalra 
  * Date: 2024
  */
 
