@@ -1,7 +1,7 @@
 //----- Systolic Array Controller ----
 //------------------------------------
-// Author: Ahmed Abdelazeem
-// Email: a.abdelazeem201@gmail.com
+// Author: Naman Kalra 
+// Email: ee23b032@iittp.ac.in 
 //
 // Description:
 // This module serves as the controller for the systolic array. 
